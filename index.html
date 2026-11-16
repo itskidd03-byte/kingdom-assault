@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <title>KINGDOM ASSAULT — Real-Time Medieval Warfare</title>
+    <meta name="description" content="KINGDOM ASSAULT: build a kingdom, raise armies, breach the enemy castle and kill their king." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23110b08'/%3E%3Cpath d='M16 4l10 18H6z' fill='%23d9b25b'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="scene"></canvas>
+      <div id="fog-vignette"></div>
+
+      <!-- top resource bar -->
+      <header id="topbar" class="hidden">
+        <div class="crest">
+          <span class="crest-mark">⚔</span>
+          <span id="faction-name">HOUSE VALDRIS</span>
+        </div>
+        <div class="res" id="res-gold" title="Gold"><span class="ico gold">◈</span><b>0</b></div>
+        <div class="res" id="res-food" title="Food"><span class="ico food">❋</span><b>0</b></div>
+        <div class="res" id="res-mats" title="Materials"><span class="ico mats">▣</span><b>0</b></div>
+        <div class="res" id="res-pop" title="Population"><span class="ico pop">☗</span><b>0/0</b></div>
+        <div class="res" id="res-army" title="Army size / upkeep"><span class="ico army">♟</span><b>0</b></div>
+        <div class="clock"><span id="clock">00:00</span><em id="ai-label">ENEMY: NORMAL</em></div>
+        <div class="top-actions">
+          <button id="btn-sound" class="ghost" title="Toggle sound">♪</button>
+          <button id="btn-pause" class="ghost" title="Pause (P)">❚❚</button>
+          <button id="btn-menu" class="ghost" title="Menu">MENU</button>
+        </div>
+      </header>
+
+      <!-- left: kingdom status / events -->
+      <aside id="sidebar" class="hidden">
+        <div class="panel-title">KINGDOM</div>
+        <div id="kingdom-status"></div>
+        <div class="panel-title">CHRONICLE</div>
+        <ul id="log"></ul>
+      </aside>
+
+      <!-- right: selection inspector -->
+      <aside id="inspector" class="hidden">
+        <div id="inspector-body"></div>
+      </aside>
+
+      <!-- bottom command bar -->
+      <footer id="commandbar" class="hidden">
+        <div id="cmd-tabs">
+          <button data-tab="build" class="tab active">BUILD</button>
+          <button data-tab="army" class="tab">ARMY</button>
+          <button data-tab="upgrades" class="tab">UPGRADES</button>
+          <button data-tab="orders" class="tab">ORDERS</button>
+        </div>
+        <div id="cmd-content"></div>
+      </footer>
+
+      <!-- minimap -->
+      <div id="minimap-wrap" class="hidden">
+        <canvas id="minimap" width="240" height="135"></canvas>
+        <div id="minimap-label">BATTLEFIELD</div>
+      </div>
+
+      <div id="toast-wrap"></div>
+      <div id="selection-box" class="hidden"></div>
+      <div id="placement-hint" class="hidden">R: rotate · ESC: cancel · CLICK: place</div>
+
+      <!-- main menu -->
+      <section id="menu">
+        <div class="menu-inner">
+          <h1>KINGDOM<span>ASSAULT</span></h1>
+          <p class="tagline">Two kingdoms. One bridge. Only one king survives.</p>
+
+          <div class="menu-block">
+            <h2>SOLO — WAR AGAINST THE AI</h2>
+            <div class="diff-row" id="diff-row">
+              <button data-diff="easy">EASY</button>
+              <button data-diff="normal" class="sel">NORMAL</button>
+              <button data-diff="hard">HARD</button>
+            </div>
+            <p class="hint" id="diff-desc">A balanced rival kingdom. It builds, recruits and attacks on its own.</p>
+            <button id="btn-solo" class="big">BEGIN CAMPAIGN</button>
+          </div>
+
+          <div class="menu-block">
+            <h2>HEAD-TO-HEAD — TWO PLAYERS</h2>
+            <p class="hint">Peer-to-peer, no server needed. One player hosts and shares two codes with the other player.</p>
+            <div class="mp-row">
+              <button id="btn-host">HOST MATCH</button>
+              <button id="btn-join">JOIN MATCH</button>
+            </div>
+            <div id="mp-panel" class="hidden"></div>
+          </div>
+
+          <div class="menu-foot">
+            <span>Left-drag select · Right-click order · WASD pan · Wheel zoom · Space pause</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- pause / end screens -->
+      <section id="overlay" class="hidden">
+        <div class="overlay-inner">
+          <h2 id="overlay-title">PAUSED</h2>
+          <p id="overlay-text"></p>
+          <div id="overlay-actions"></div>
+        </div>
+      </section>
+
+      <div id="loading" class="hidden"><div class="load-inner"><div class="spinner"></div><span id="load-text">MUSTERING THE REALM…</span></div></div>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

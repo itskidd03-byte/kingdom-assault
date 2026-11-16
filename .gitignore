@@ -5,3 +5,5 @@ shots/
 qs.html
 qs_manifest.json
 .DS_Store
+__pycache__/
+*.pyc

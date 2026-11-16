@@ -3,18 +3,18 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Real-time medieval kingdom building and tactical warfare in the browser",
+  "description": "KINGDOM ASSAULT - real-time kingdom building and tactical warfare",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
     "three": "^0.169.0"
   },
   "devDependencies": {
+    "vite": "^5.4.10",
     "@gltf-transform/cli": "^4.5.1",
-    "@gltf-transform/core": "^4.5.1",
-    "vite": "^5.4.8"
+    "@gltf-transform/core": "^4.5.1"
   }
 }
