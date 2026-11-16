@@ -38,12 +38,12 @@ jobs:
           ls public/assets/models
 
       - name: Commit the imported sources
-        continue-on-error: true
         run: |
           git config user.name "kingdom-assault"
           git config user.email "itskidd03@gmail.com"
+          rm -rf .github
           git add -A
-          git commit -m "Import full game source and 3D art" || exit 0
+          git commit -m "Import full game source and 3D art"
           git push origin HEAD:main
 
       - uses: actions/setup-node@v4
