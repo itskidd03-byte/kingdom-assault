@@ -1,6 +1,6 @@
 import {
   TROOPS, BUILDINGS, BUILDING_MAX_LEVEL, BUILDING_UPGRADE, UPGRADE, TILE,
-  MAX_UNITS_PER_KINGDOM, DIFFICULTY, BASE_X,
+  MAX_UNITS_PER_KINGDOM, DIFFICULTY, BASE_X, towerBounty,
 } from './config.js';
 import { World } from './world.js';
 import { Kingdom } from './kingdom.js';
@@ -297,6 +297,7 @@ export class Game {
       tx: target.x, tz: target.z, targetId: target.id,
       owner: b.owner, dmg: b.attackDamage, kind, speed: kind === 'bolt' ? 34 : 46,
       alive: true, life: 4, arc: kind === 'bolt' ? 1.4 : 0.4, fromTower: true,
+      towerId: b.id, towerLevel: b.level,
     });
     this.effects.push({ type: 'towerfire', x: b.x, z: b.z, y: b.y, life: 0.25 });
   }
@@ -326,6 +327,17 @@ export class Game {
     u.hp = 0;
     this.effects.push({ type: 'death', x: u.x, z: u.z, y: u.groundY || 0, life: 1.1, owner: u.owner, cls: u.cls });
     if (source && this.kingdoms[source.owner]) this.kingdoms[source.owner].stats.killed++;
+    // towers pay a bounty for every kill they land
+    if (source?.towerId) {
+      const k = this.kingdoms[source.owner];
+      if (k) {
+        const gold = towerBounty(source.towerLevel || 1);
+        k.resources.gold += gold;
+        k.stats.bounty = (k.stats.bounty || 0) + gold;
+        this.effects.push({ type: 'bounty', x: u.x, z: u.z, y: (u.groundY || 0) + 1.6, life: 1.3, owner: source.owner, gold });
+        if (this.emit) this.emit('bounty', { owner: source.owner, gold, level: source.towerLevel || 1 });
+      }
+    }
     if (this.kingdoms[u.owner]) this.kingdoms[u.owner].stats.lost++;
     if (u.isKing) this.killKing(u);
   }
@@ -358,7 +370,7 @@ export class Game {
         p.alive = false;
         const tt = this.getTarget(p.targetId);
         if (tt && !tt.dead) {
-          const shooter = { owner: p.owner, atk: 0 };
+          const shooter = { owner: p.owner, atk: 0, towerId: p.towerId, towerLevel: p.towerLevel };
           this.applyDamage(tt, p.dmg, shooter, p.kind);
         }
         this.effects.push({ type: 'impact', x: p.tx, z: p.tz, y: p.y, life: 0.25, kind: p.kind });

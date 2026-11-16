@@ -1,4 +1,4 @@
-import { BUILDINGS, BUILD_ORDER, BUILDING_MAX_LEVEL, BUILDING_UPGRADE, TROOPS, TROOP_KEYS, UPGRADE, ORDERS, FORMATIONS, TILE, DIFFICULTY, WORLD } from '../core/config.js';
+import { BUILDINGS, BUILD_ORDER, BUILDING_MAX_LEVEL, BUILDING_UPGRADE, TROOPS, TROOP_KEYS, UPGRADE, ORDERS, FORMATIONS, TILE, DIFFICULTY, WORLD, towerBounty } from '../core/config.js';
 import { clamp } from '../core/rng.js';
 
 const $ = (s) => document.querySelector(s);
@@ -457,7 +457,7 @@ export class HUD {
           def.food ? `+${fmt(def.food)}f/s` : '',
           def.mats ? `+${fmt(def.mats)}m/s` : '',
           def.pop ? `+${def.pop} pop` : '',
-          def.attack ? `${def.attack.dmg} dmg · ${def.attack.range}m` : '',
+          def.attack ? `${def.attack.dmg} dmg · ${def.attack.range}m · +${towerBounty(1)}g/kill` : '',
           def.healAura ? `heals ${def.healAura}/s` : '',
           def.unlocks?.length ? `trains ${def.unlocks.map((c) => TROOPS[c].short.toLowerCase()).join(', ')}` : '',
         ].filter(Boolean).join(' · ');
@@ -600,6 +600,7 @@ export class HUD {
         ${def.mats ? `<div class="stat"><span>Materials</span><b>+${(def.mats * BUILDING_UPGRADE.outMult(b.level)).toFixed(1)}/s</b></div>` : ''}
         ${def.pop ? `<div class="stat"><span>Population</span><b>+${Math.round(def.pop * (1 + 0.25 * (b.level - 1)))}</b></div>` : ''}
         ${def.attack ? `<div class="stat"><span>Tower damage</span><b>${Math.round(b.attackDamage)} · ${Math.round(b.attackRange)}m</b></div>` : ''}
+        ${def.attack ? `<div class="stat"><span>Bounty per kill</span><b>+${towerBounty(b.level)}g</b></div>` : ''}
         ${queue}
         ${b.upgrading ? `<div class="stat"><span>Upgrading</span><b>${Math.ceil(b.upgrading.remaining)}s</b></div>` : ''}
         <div class="insp-actions">

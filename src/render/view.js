@@ -124,7 +124,7 @@ export class View {
         const n = hash2(Math.round(x * 0.7), Math.round(z * 0.7), 11);
         const slope = Math.abs(this.game.world.heightAt(x + 1.5, z) - y) + Math.abs(this.game.world.heightAt(x, z + 1.5) - y);
         const nearRiver = Math.max(0, 1 - Math.abs(Math.abs(x) - 9) / 9);
-        const road = Math.abs(z) < 7 && Math.abs(x) > 12 ? 1 - Math.abs(z) / 7 : 0;
+        const road = this.game.world.isOnRoad(x, z) ? 1 : 0;
         let r = 0.16 + n * 0.05, g = 0.19 + n * 0.06, b = 0.13 + n * 0.04;
         if (y < -1.2) { r = 0.14; g = 0.16; b = 0.13; }
         if (nearRiver > 0.1 && y > -1.2) {
@@ -132,7 +132,7 @@ export class View {
           r = lerp(r, 0.24, m); g = lerp(g, 0.21, m); b = lerp(b, 0.15, m);
         }
         if (slope > 1.1) { const m = clamp((slope - 1.1) / 2, 0, 0.7); r = lerp(r, 0.28, m); g = lerp(g, 0.27, m); b = lerp(b, 0.25, m); }
-        if (road > 0.05) { const m = road * 0.6; r = lerp(r, 0.29, m); g = lerp(g, 0.24, m); b = lerp(b, 0.17, m); }
+        if (road > 0.05) { const m = road * 0.8; r = lerp(r, 0.34, m); g = lerp(g, 0.27, m); b = lerp(b, 0.18, m); }
         col.push(r, g, b);
       }
     }

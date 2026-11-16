@@ -5,9 +5,13 @@ import { MinHeap } from './rng.js';
  * The grid is a flat Uint8Array of costs: 0 = blocked, >0 = movement cost.
  */
 export class PathFinder {
-  constructor(w, h, cell) {
+  constructor(w, h, cell, originX, originZ) {
     this.w = w; this.h = h; this.cell = cell;
+    // cell (0,0) covers [-w/2, -w/2 + cell) unless an origin is given
+    this.originX = originX === undefined ? -(w * cell) / 2 : originX;
+    this.originZ = originZ === undefined ? -(h * cell) / 2 : originZ;
     this.blocked = new Uint8Array(w * h);
+    this.cost = new Float32Array(w * h).fill(1);
     this.g = new Float32Array(w * h);
     this.f = new Float32Array(w * h);
     this.from = new Int32Array(w * h);
@@ -26,12 +30,28 @@ export class PathFinder {
     this.blocked[cz * this.w + cx] = v ? 1 : 0;
   }
 
+  /** Movement multiplier: < 1 makes a cell cheaper, so units prefer roads. */
+  setCost(cx, cz, v) {
+    if (!this.inBounds(cx, cz)) return;
+    this.cost[cz * this.w + cx] = v;
+  }
+
+  costAt(cx, cz) {
+    if (!this.inBounds(cx, cz)) return 1;
+    return this.cost[cz * this.w + cx];
+  }
+
   worldToCell(x, z) {
-    return { cx: Math.floor(x / this.cell), cz: Math.floor(z / this.cell) };
+    return {
+      cx: Math.floor((x - this.originX) / this.cell),
+      cz: Math.floor((z - this.originZ) / this.cell),
+    };
   }
   cellToWorld(cx, cz) {
-    return { x: (cx + 0.5) * this.cell, z: (cz + 0.5) * this.cell };
+    return { x: this.originX + (cx + 0.5) * this.cell, z: this.originZ + (cz + 0.5) * this.cell };
   }
+  cellCenterX(cx) { return this.originX + (cx + 0.5) * this.cell; }
+  cellCenterZ(cz) { return this.originZ + (cz + 0.5) * this.cell; }
 
   /** Nearest walkable cell (BFS ring) — used when a target lands inside a structure. */
   nearestOpen(cx, cz, maxR = 14) {
@@ -50,8 +70,9 @@ export class PathFinder {
 
   /** A* from world position to world position. Returns array of {x,z} waypoints. */
   findPath(sx, sz, tx, tz, maxNodes) {
-    const s = this.nearestOpen(Math.floor(sx / this.cell), Math.floor(sz / this.cell));
-    const t = this.nearestOpen(Math.floor(tx / this.cell), Math.floor(tz / this.cell));
+    const sc = this.worldToCell(sx, sz), tc = this.worldToCell(tx, tz);
+    const s = this.nearestOpen(sc.cx, sc.cz);
+    const t = this.nearestOpen(tc.cx, tc.cz);
     if (!s || !t) return null;
     if (s.cx === t.cx && s.cz === t.cz) return [{ x: tx, z: tz }];
 
@@ -90,7 +111,7 @@ export class PathFinder {
           if (this.isBlockedCell(cx + dx, cz) || this.isBlockedCell(cx, cz + dz)) continue;
         }
         const ni = this.idx(nx, nz);
-        const ng = this.g[ci] + cost;
+        const ng = this.g[ci] + cost * this.cost[ni];
         if (this.stamp[ni] !== gen) {
           this.stamp[ni] = gen; this.g[ni] = Infinity; this.closed[ni] = 0;
         }
@@ -117,7 +138,7 @@ export class PathFinder {
     let cur = goalIdx;
     while (cur !== -1) {
       const cx = cur % w, cz = (cur / w) | 0;
-      out.push({ x: (cx + 0.5) * this.cell, z: (cz + 0.5) * this.cell });
+      out.push({ x: this.cellCenterX(cx), z: this.cellCenterZ(cz) });
       cur = this.from[cur];
     }
     out.reverse();
@@ -132,9 +153,8 @@ export class PathFinder {
     const steps = Math.ceil(Math.hypot(dx, dz) / this.cell);
     for (let i = 1; i < steps; i++) {
       const t = i / steps;
-      const cx = Math.floor((x0 + dx * t) / this.cell);
-      const cz = Math.floor((z0 + dz * t) / this.cell);
-      if (this.isBlockedCell(cx, cz)) return true;
+      const cc = this.worldToCell(x0 + dx * t, z0 + dz * t);
+      if (this.isBlockedCell(cc.cx, cc.cz)) return true;
     }
     return false;
   }

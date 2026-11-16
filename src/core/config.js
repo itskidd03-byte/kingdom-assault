@@ -12,6 +12,22 @@ export const BRIDGE = { z0: -12, z1: 12, deck: 1.1 };
 export const BASE_X = 86;        // distance of each kingdom centre from the middle
 export const TICK = 0.05;        // 20 Hz authoritative simulation tick
 export const MAX_UNITS_PER_KINGDOM = 140;
+
+/**
+ * Pre-laid road network. Both kingdoms get exactly the same mirrored layout:
+ * a highway from the castle, through the settlement, out past the walls and
+ * over the bridge, plus a 20x20 apron outside the walls where towers belong.
+ */
+export const ROAD = {
+  width: 7,
+  points: [[112, 0], [86, 0], [64, 0], [26, 0], [8, 0]],
+  yard: { x: 54, z: 0, w: 20, h: 20 },
+  cost: 0.6,
+};
+
+/** Gold paid to the tower owner for every kill it lands. */
+export const TOWER_BOUNTY = { base: 8, perLevel: 4 };
+export const towerBounty = (level = 1) => TOWER_BOUNTY.base + TOWER_BOUNTY.perLevel * (level - 1);
 export const POP_HARD_CAP = 160;
 
 export const FACTIONS = [

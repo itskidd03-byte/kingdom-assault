@@ -1,4 +1,4 @@
-import { TILE, NAV_CELL, WORLD, RIVER, BRIDGE, BASE_X, BUILDINGS } from './config.js';
+import { TILE, NAV_CELL, WORLD, RIVER, BRIDGE, BASE_X, BUILDINGS, ROAD } from './config.js';
 import { PathFinder } from './pathfinding.js';
 import { fbm, hash2, clamp, lerp } from './rng.js';
 
@@ -87,6 +87,8 @@ export class World {
       for (let cx = 0; cx < pf.w; cx++) {
         const { x, z } = pf.cellToWorld(cx, cz);
         pf.setBlocked(cx, cz, !this.isNavigable(x, z));
+        // roads are cheaper to walk, so armies path along them automatically
+        pf.setCost(cx, cz, this.isOnRoad(x, z) ? ROAD.cost : 1);
       }
     }
   }
@@ -100,11 +102,47 @@ export class World {
     const x0 = b.x - (b.w * TILE) / 2, z0 = b.z - (b.h * TILE) / 2;
     for (let i = 0; i < cols * 2; i++) {
       for (let j = 0; j < rows * 2; j++) {
-        const cx = Math.floor((x0 + i * (TILE / 2) + 0.5) / pf.cell);
-        const cz = Math.floor((z0 + j * (TILE / 2) + 0.5) / pf.cell);
-        pf.setBlocked(cx, cz, block);
+        const cc = pf.worldToCell(x0 + i * (TILE / 2) + 0.5, z0 + j * (TILE / 2) + 0.5);
+        pf.setBlocked(cc.cx, cc.cz, block);
       }
     }
+  }
+
+  /* ---------------- roads ---------------- */
+
+  /** Both kingdoms get the identical layout, mirrored across the river. */
+  roadSegments() {
+    if (this._roads) return this._roads;
+    const out = [];
+    const pts = ROAD.points;
+    for (const side of [1, -1]) {
+      for (let i = 0; i < pts.length - 1; i++) {
+        out.push({
+          x1: pts[i][0] * side, z1: pts[i][1],
+          x2: pts[i + 1][0] * side, z2: pts[i + 1][1],
+          r: ROAD.width / 2,
+        });
+      }
+      out.push({ yard: true, x: ROAD.yard.x * side, z: ROAD.yard.z, hw: ROAD.yard.w / 2, hh: ROAD.yard.h / 2 });
+    }
+    this._roads = out;
+    return out;
+  }
+
+  isOnRoad(x, z) {
+    for (const s of this.roadSegments()) {
+      if (s.yard) {
+        if (Math.abs(x - s.x) <= s.hw && Math.abs(z - s.z) <= s.hh) return true;
+        continue;
+      }
+      const dx = s.x2 - s.x1, dz = s.z2 - s.z1;
+      const len2 = dx * dx + dz * dz || 1;
+      let t = ((x - s.x1) * dx + (z - s.z1) * dz) / len2;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const px = s.x1 + dx * t, pz = s.z1 + dz * t;
+      if ((x - px) * (x - px) + (z - pz) * (z - pz) <= s.r * s.r) return true;
+    }
+    return false;
   }
 
   /* ---------------- building placement ---------------- */
@@ -171,6 +209,7 @@ export class World {
       const z = (rng(i + 991) - 0.5) * (this.h - 10);
       if (Math.abs(x) < 22) continue;                     // keep the crossing clear
       if (this.isWater(x, z)) continue;
+      if (this.isOnRoad(x, z)) continue;                  // the highway and the tower apron are kept clear
       const inSettle = Math.abs(x) > 30 && Math.abs(x) < 120 && Math.abs(z) < 60;
       if (inSettle && rng(i + 17) > 0.05) continue;
       trees.push({ x, z, s: 0.7 + rng(i + 33) * 0.9, r: rng(i + 51) * Math.PI * 2, v: rng(i + 71) });
@@ -181,6 +220,7 @@ export class World {
       const x = (rng(i + 200) - 0.5) * (this.w - 16);
       const z = (rng(i + 700) - 0.5) * (this.h - 12);
       if (this.isWater(x, z)) continue;
+      if (this.isOnRoad(x, z)) continue;
       if (Math.abs(x) > 24 && Math.abs(x) < 118 && Math.abs(z) < 58) continue;
       rocks.push({ x, z, s: 0.6 + rng(i + 41) * 1.9, r: rng(i + 91) * 6.28 });
     }
