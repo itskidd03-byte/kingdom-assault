@@ -10,6 +10,9 @@ his castle is in ruins.
 
 ## Play
 
+* **Online:** https://itskidd03-byte.github.io/kingdom-assault/
+* **Android app:** [download the APK](https://github.com/itskidd03-byte/kingdom-assault/releases/latest/download/kingdom-assault.apk)
+
 ```bash
 npm install
 npm run dev      # http://localhost:3000
@@ -17,6 +20,23 @@ npm run dev      # http://localhost:3000
 
 Production build: `npm run build` → static files in `dist/` (works from any
 static host, including GitHub Pages, because `base` is relative).
+
+## Install it as an app
+
+**Android APK** — `kingdom-assault.apk` on the
+[releases page](https://github.com/itskidd03-byte/kingdom-assault/releases) is
+built by `.github/workflows/android.yml`. The whole game (engine, art, audio)
+is bundled inside it, so it runs with no connection. Download it, allow installs
+from that source when Android asks, then open Kingdom Assault.
+
+**Any device (PWA)** — open the site in Chrome/Edge/Safari and use
+*Install app* / *Add to Home Screen*. The generated service worker
+(`dist/sw.js`, built by the Vite config) caches the complete build, including all
+3D models, so the installed app starts offline.
+
+**Multiplayer works in both** — the app is the same build, and head-to-head is
+peer to peer: host or join, swap the two codes, play. Nothing is hosted on a
+match server, and the app needs no backend when installed.
 
 ## Modes
 
