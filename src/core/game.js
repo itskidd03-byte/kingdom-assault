@@ -481,6 +481,7 @@ export class Game {
       case 'demolish': return this.cmdDemolish(cmd);
       case 'research': return this.cmdResearch(cmd);
       case 'order': return this.cmdOrder(cmd);
+      case 'assaultAll': return this.cmdAssaultAll(cmd);
       case 'formation': return this.cmdFormation(cmd);
       case 'rally': return this.cmdRally(cmd);
       default: return { ok: false, reason: 'Unknown command' };
@@ -580,6 +581,22 @@ export class Game {
     const k = this.kingdoms[cmd.owner];
     if (!TROOPS[cmd.cls]) return { ok: false, reason: 'Unknown troop' };
     return k.startResearch(cmd.cls);
+  }
+
+  /** One button for the whole army: every troop marches the road to the enemy kingdom. */
+  cmdAssaultAll(cmd) {
+    const list = this.units.filter((u) => u.owner === cmd.owner && u.alive && !u.isKing);
+    if (!list.length) return { ok: false, reason: 'No troops to send' };
+    const foe = this.kingdoms[1 - cmd.owner];
+    const castle = foe && foe.castle;
+    const tx = castle ? castle.x : (cmd.owner === 0 ? BASE_X : -BASE_X);
+    const gate = this.world.nearestRoadPoint(tx + (cmd.owner === 0 ? 9 : -9), 0);
+    list.forEach((u, i) => {
+      const lane = ((i % 7) - 3) * 0.9;
+      u.setOrder('assault', gate.x + lane, gate.z + ((((i / 7) | 0) % 3) - 1) * 1.2);
+    });
+    this.emit('orderIssued', { owner: cmd.owner, order: 'assault', x: gate.x, z: gate.z, count: list.length });
+    return { ok: true, count: list.length, x: gate.x, z: gate.z };
   }
 
   cmdOrder(cmd) {

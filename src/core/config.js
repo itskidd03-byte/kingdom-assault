@@ -21,6 +21,8 @@ export const MAX_UNITS_PER_KINGDOM = 140;
 export const ROAD = {
   width: 6,
   tile: 2,
+  // road width in metres at each point: 40 m (20 tiles) of mustering ground by the bridge
+  widths: [12, 12, 12, 16, 40, 40, 40, 32, 20, 10, 8],
   // castle gate -> settlement -> snaking run to the bridge (mirrored for the enemy)
   points: [[100, 0], [86, 0], [70, 0], [58, 0], [48, 0], [40, 8], [30, -8], [20, 8], [12, 0], [8, 0], [0, 0]],
   yard: { x: 54, z: 0, w: 20, h: 20 },

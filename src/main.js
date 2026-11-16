@@ -38,6 +38,12 @@ function bindMenu() {
   $('#btn-join').addEventListener('click', joinMatch);
   $('#btn-pause').addEventListener('click', togglePause);
   $('#btn-menu').addEventListener('click', () => openGameMenu());
+  const assaultButton = $('#btn-assault');
+  if (assaultButton) assaultButton.addEventListener('click', () => {
+    if (!state.game || state.over) { state.hud?.toast('The war is over', 'bad'); return; }
+    const res = state.hud?.dispatch({ type: 'assaultAll', owner: state.owner });
+    if (res?.ok) state.hud.toast(`${res.count} troops march on the enemy kingdom`, 'good');
+  });
   const exitButton = $('#btn-exit');
   if (exitButton) exitButton.addEventListener('click', () => exitGame());
   $('#btn-sound').addEventListener('click', () => {

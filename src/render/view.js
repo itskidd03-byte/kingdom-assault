@@ -125,14 +125,15 @@ export class View {
         const slope = Math.abs(this.game.world.heightAt(x + 1.5, z) - y) + Math.abs(this.game.world.heightAt(x, z + 1.5) - y);
         const nearRiver = Math.max(0, 1 - Math.abs(Math.abs(x) - 9) / 9);
         const road = this.game.world.isOnRoad(x, z) ? 1 : 0;
-        let r = 0.16 + n * 0.05, g = 0.19 + n * 0.06, b = 0.13 + n * 0.04;
+        // packed earth everywhere: this valley has no grass, only road and dirt
+        let r = 0.29 + n * 0.05, g = 0.24 + n * 0.045, b = 0.17 + n * 0.03;
         if (y < -1.2) { r = 0.14; g = 0.16; b = 0.13; }
         if (nearRiver > 0.1 && y > -1.2) {
           const m = nearRiver * 0.55;
           r = lerp(r, 0.24, m); g = lerp(g, 0.21, m); b = lerp(b, 0.15, m);
         }
         if (slope > 1.1) { const m = clamp((slope - 1.1) / 2, 0, 0.7); r = lerp(r, 0.28, m); g = lerp(g, 0.27, m); b = lerp(b, 0.25, m); }
-        if (road > 0.05) { const m = road * 0.8; r = lerp(r, 0.34, m); g = lerp(g, 0.27, m); b = lerp(b, 0.18, m); }
+        if (road > 0.05) { const m = road * 0.55; r = lerp(r, 0.41, m); g = lerp(g, 0.34, m); b = lerp(b, 0.22, m); }
         col.push(r, g, b);
       }
     }

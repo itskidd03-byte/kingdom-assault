@@ -123,7 +123,8 @@ export class World {
         out.push({
           x1: pts[i][0] * side, z1: pts[i][1],
           x2: pts[i + 1][0] * side, z2: pts[i + 1][1],
-          r: ROAD.width / 2,
+          r1: (ROAD.widths?.[i] ?? ROAD.width) / 2,
+          r2: (ROAD.widths?.[i + 1] ?? ROAD.width) / 2,
         });
       }
       out.push({ yard: true, x: ROAD.yard.x * side, z: ROAD.yard.z, hw: ROAD.yard.w / 2, hh: ROAD.yard.h / 2 });
@@ -202,7 +203,8 @@ export class World {
       let t = ((x - s.x1) * dx + (z - s.z1) * dz) / len2;
       t = t < 0 ? 0 : t > 1 ? 1 : t;
       const px = s.x1 + dx * t, pz = s.z1 + dz * t;
-      if ((x - px) * (x - px) + (z - pz) * (z - pz) <= s.r * s.r) return true;
+      const r = s.r1 + (s.r2 - s.r1) * t;
+      if ((x - px) * (x - px) + (z - pz) * (z - pz) <= r * r) return true;
     }
     return false;
   }
@@ -294,7 +296,8 @@ export class World {
       rocks.push({ x, z, s: 0.6 + rng(i + 41) * 1.9, r: rng(i + 91) * 6.28 });
     }
     i = 0;
-    while (grass.length < 700 && i < 4000) {
+    // no grass: the valley floor is road and packed earth only
+    while (grass.length < 0 && i < 4000) {
       i++;
       const x = (rng(i + 1300) - 0.5) * (this.w - 8);
       const z = (rng(i + 1700) - 0.5) * (this.h - 6);
