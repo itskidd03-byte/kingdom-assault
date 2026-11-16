@@ -86,9 +86,10 @@ export class World {
     for (let cz = 0; cz < pf.h; cz++) {
       for (let cx = 0; cx < pf.w; cx++) {
         const { x, z } = pf.cellToWorld(cx, cz);
-        pf.setBlocked(cx, cz, !this.isNavigable(x, z));
-        // roads are cheaper to walk, so armies path along them automatically
-        pf.setCost(cx, cz, this.isOnRoad(x, z) ? ROAD.cost : 1);
+        const onRoad = this.isOnRoad(x, z);
+        // armies may only march on the pre-laid road: no cutting across the fields
+        pf.setBlocked(cx, cz, !this.isNavigable(x, z) || !onRoad);
+        pf.setCost(cx, cz, onRoad ? ROAD.cost : 1);
       }
     }
   }
@@ -102,8 +103,10 @@ export class World {
     const x0 = b.x - (b.w * TILE) / 2, z0 = b.z - (b.h * TILE) / 2;
     for (let i = 0; i < cols * 2; i++) {
       for (let j = 0; j < rows * 2; j++) {
-        const cc = pf.worldToCell(x0 + i * (TILE / 2) + 0.5, z0 + j * (TILE / 2) + 0.5);
-        pf.setBlocked(cc.cx, cc.cz, block);
+        const wx = x0 + i * (TILE / 2) + 0.5, wz = z0 + j * (TILE / 2) + 0.5;
+        const cc = pf.worldToCell(wx, wz);
+        // clearing a footprint must not open a shortcut off the road
+        pf.setBlocked(cc.cx, cc.cz, block ? true : (!this.isNavigable(wx, wz) || !this.isOnRoad(wx, wz)));
       }
     }
   }
@@ -127,6 +130,65 @@ export class World {
     }
     this._roads = out;
     return out;
+  }
+
+  /** Road test for a nav-grid cell (used for tile snapping and tower rules). */
+  roadCellAt(cx, cz) {
+    const { pf } = this;
+    return this.isOnRoad(pf.cellCenterX(cx), pf.cellCenterZ(cz));
+  }
+
+  /** A tile just off the road, next to a road tile — where towers belong. */
+  isTowerTile(x, z) {
+    const { pf } = this;
+    const c = pf.worldToCell(x, z);
+    if (this.roadCellAt(c.cx, c.cz)) return false;
+    for (let dz = -1; dz <= 1; dz++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dz) continue;
+        if (this.roadCellAt(c.cx + dx, c.cz + dz)) return true;
+      }
+    }
+    return false;
+  }
+
+  /** Nearest point on the road (cell centre) — spawn points, rally points. */
+  nearestRoadPoint(x, z, maxCells = 24) {
+    const { pf } = this;
+    const c = pf.worldToCell(x, z);
+    let best = null, bestD = Infinity;
+    for (let r = 0; r <= maxCells && !best; r++) {
+      for (let dz = -r; dz <= r; dz++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+          const cx = c.cx + dx, cz = c.cz + dz;
+          if (!this.roadCellAt(cx, cz) || pf.isBlockedCell(cx, cz)) continue;
+          const wx = pf.cellCenterX(cx), wz = pf.cellCenterZ(cz);
+          const d = (wx - x) ** 2 + (wz - z) ** 2;
+          if (d < bestD) { bestD = d; best = { x: wx, z: wz }; }
+        }
+      }
+      if (best && r > 2) break;
+    }
+    return best || { x, z };
+  }
+
+  /** Nearest tile that borders the road, for tower placement. */
+  nearestTowerTile(owner, x, z, maxCells = 8) {
+    const { pf } = this;
+    const c = pf.worldToCell(x, z);
+    let best = null, bestD = Infinity;
+    for (let dz = -maxCells; dz <= maxCells; dz++) {
+      for (let dx = -maxCells; dx <= maxCells; dx++) {
+        const cx = c.cx + dx, cz = c.cz + dz;
+        const wx = pf.cellCenterX(cx), wz = pf.cellCenterZ(cz);
+        if (!this.isTowerTile(wx, wz)) continue;
+        if (!this.canPlace(owner, 'tower_archer', wx, wz, 0).ok) continue;
+        const d = (wx - x) ** 2 + (wz - z) ** 2;
+        if (d < bestD) { bestD = d; best = { x: wx, z: wz }; }
+      }
+    }
+    return best;
   }
 
   isOnRoad(x, z) {
@@ -169,6 +231,13 @@ export class World {
     const def = BUILDINGS[type];
     if (!def) return { ok: false, reason: 'Unknown structure' };
     if (!this.inBuildZone(owner, x, z)) return { ok: false, reason: 'Outside your construction zone' };
+
+    // the highway is reserved for troops: towers hug it, everything else stays clear
+    if (def.tower) {
+      if (!this.isTowerTile(x, z)) return { ok: false, reason: 'Towers must sit on a tile bordering the road' };
+    } else if (type !== 'gate' && this.isOnRoad(x, z)) {
+      return { ok: false, reason: 'The road must stay clear for your army' };
+    }
 
     const fp = this.footprint(type, rot);
     const x0 = x - fp.w / 2, x1 = x + fp.w / 2, z0 = z - fp.h / 2, z1 = z + fp.h / 2;

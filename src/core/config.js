@@ -19,8 +19,10 @@ export const MAX_UNITS_PER_KINGDOM = 140;
  * over the bridge, plus a 20x20 apron outside the walls where towers belong.
  */
 export const ROAD = {
-  width: 7,
-  points: [[112, 0], [86, 0], [64, 0], [26, 0], [8, 0]],
+  width: 6,
+  tile: 2,
+  // castle gate -> settlement -> snaking run to the bridge (mirrored for the enemy)
+  points: [[100, 0], [86, 0], [70, 0], [58, 0], [48, 0], [40, 8], [30, -8], [20, 8], [12, 0], [8, 0], [0, 0]],
   yard: { x: 54, z: 0, w: 20, h: 20 },
   cost: 0.6,
 };
@@ -178,17 +180,17 @@ export const BUILDINGS = {
     desc: 'Recruits Garrison Watch and shoots at nearby raiders.',
   },
   tower_archer: {
-    name: 'Archer Tower', short: 'ARCHER TOWER', w: 1, h: 1, hp: 1100, buildTime: 16, model: 'towerA',
+    name: 'Archer Tower', short: 'ARCHER TOWER', w: 1, h: 1, hp: 1100, buildTime: 16, model: 'towerA', tower: true,
     cost: { gold: 110, mats: 100 }, vision: 38, attack: { dmg: 15, range: 30, rate: 1.05, proj: 'arrow' },
     desc: 'Fast, long-ranged tower. Excellent against infantry and archers.',
   },
   tower_ballista: {
-    name: 'Ballista Tower', short: 'BALLISTA', w: 1, h: 1, hp: 950, buildTime: 18, model: 'towerB',
+    name: 'Ballista Tower', short: 'BALLISTA', w: 1, h: 1, hp: 950, buildTime: 18, model: 'towerB', tower: true,
     cost: { gold: 140, mats: 120 }, vision: 40, attack: { dmg: 42, range: 34, rate: 0.42, proj: 'bolt' },
     desc: 'Slow heavy bolts. Shreds cavalry, elites and siege columns.',
   },
   tower_heavy: {
-    name: 'Heavy Tower', short: 'HEAVY TOWER', w: 1, h: 1, hp: 2400, buildTime: 28, model: 'towerHeavy',
+    name: 'Heavy Tower', short: 'HEAVY TOWER', w: 1, h: 1, hp: 2400, buildTime: 28, model: 'towerHeavy', tower: true,
     cost: { gold: 240, mats: 230 }, vision: 42, attack: { dmg: 24, range: 28, rate: 0.9, proj: 'bolt' }, armor: 10,
     desc: 'Fortified tower with high health and armour. The backbone of a wall line.',
   },
@@ -203,7 +205,7 @@ export const BUILDINGS = {
     desc: 'Passable to your own troops, hostile to the enemy. Fires on raiders.',
   },
   watchtower: {
-    name: 'Watchtower', short: 'WATCHTOWER', w: 1, h: 1, hp: 600, buildTime: 10, model: 'watchtower',
+    name: 'Watchtower', short: 'WATCHTOWER', w: 1, h: 1, hp: 600, buildTime: 10, model: 'watchtower', tower: true,
     cost: { gold: 70, mats: 55 }, vision: 52,
     desc: 'Huge vision radius. Reveals enemy armies long before they arrive.',
   },

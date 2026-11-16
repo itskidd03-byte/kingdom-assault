@@ -55,15 +55,16 @@ export class Game {
       const castle = this.place(owner, 'castle', castleX, 0, 0, { completed: true });
       k.castle = castle;
 
+      // preset settlement: everything sits in the two bands beside the highway
       const layout = [
         ['townhall', BASE_X, 16, 0, { completed: true }],
-        ['house', BASE_X - 10, 32, 0, { completed: true }],
-        ['house', BASE_X + 12, 30, 0, { completed: true }],
-        ['farm', BASE_X + 4, -30, 0, { completed: true }],
-        ['market', BASE_X - 14, -14, 0, { completed: true }],
-        ['mine', BASE_X + 16, -8, 0, { completed: true }],
-        ['barracks', BASE_X - 4, -4, 0, { completed: true }],
-        ['blacksmith', BASE_X + 22, 14, 0, { completed: true }],
+        ['house', BASE_X + 12, 10, 0, { completed: true }],
+        ['house', BASE_X - 12, 12, 0, { completed: true }],
+        ['farm', BASE_X + 6, -15, 0, { completed: true }],
+        ['market', BASE_X - 18, -12, 0, { completed: true }],
+        ['mine', BASE_X - 6, -17, 0, { completed: true }],
+        ['barracks', BASE_X + 24, 14, 0, { completed: true }],
+        ['blacksmith', BASE_X - 24, 14, 0, { completed: true }],
       ];
       for (const [type, dx, dz, rot, o] of layout) {
         const x = sx * dx, z = dz * (owner === 0 ? 1 : -1);
@@ -83,12 +84,13 @@ export class Game {
       k.king = king;
 
       // small starting garrison
-      const startPos = { x: sx * (BASE_X - 6), z: 6 };
+      // the garrison musters on the road outside the castle
+      const startPos = { x: sx * (BASE_X - 8), z: 0 };
       const starters = ['infantry', 'infantry', 'infantry', 'infantry', 'ranged', 'ranged', 'garrison'];
       starters.forEach((cls, i) => {
-        const a = (i / starters.length) * Math.PI * 2;
-        const u = new Unit(this, owner, cls, startPos.x + Math.cos(a) * 4.5, startPos.z + Math.sin(a) * 4.5);
-        u.setOrder('defense', startPos.x, startPos.z);
+        const offset = (i - (starters.length - 1) / 2) * 2.2;
+        const u = new Unit(this, owner, cls, startPos.x + offset * sx, 0);
+        u.setOrder('defense', startPos.x, 0);
         this.units.push(u);
       });
 
@@ -451,7 +453,10 @@ export class Game {
     let z = building.z + Math.sin(a) * r + (building.owner === 0 ? 2 : -2);
     if (!this.world.isNavigable(x, z)) { x = building.x; z = building.z; }
     const u = new Unit(this, owner, cls, x, z);
-    const rally = building.rally || { x: building.x, z: building.z + (owner === 0 ? 7 : -7) };
+    const rally = building.rally || this.world.nearestRoadPoint(building.x, building.z);
+    const spawn = this.world.nearestRoadPoint(rally.x, rally.z);
+    u.x = spawn.x; u.z = spawn.z;
+    u.groundY = this.world.heightAt(spawn.x, spawn.z);
     u.setOrder('defense', rally.x, rally.z);
     this.units.push(u);
     k.stats.trained++;
@@ -638,7 +643,7 @@ export class Game {
     const k = this.kingdoms[cmd.owner];
     const b = k.buildings.find((x) => x.id === cmd.buildingId);
     if (!b) return { ok: false, reason: 'No structure' };
-    b.rally = { x: cmd.x, z: cmd.z };
+    b.rally = this.world.nearestRoadPoint(cmd.x, cmd.z);
     return { ok: true };
   }
 

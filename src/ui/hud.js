@@ -340,6 +340,11 @@ export class HUD {
     let w = def.w, h = def.h;
     if (rot % 2 === 1) [w, h] = [h, w];
     const halfW = (w * TILE) / 2, halfH = (h * TILE) / 2;
+    // towers snap onto the nearest grid tile that borders the road
+    if (def.tower) {
+      const tile = this.game.world.nearestTowerTile(this.owner, x, z, 10);
+      if (tile) return tile;
+    }
     return {
       x: clamp(Math.round(x / (TILE / 2)) * (TILE / 2), -WORLD.w / 2 + halfW, WORLD.w / 2 - halfW),
       z: clamp(Math.round(z / (TILE / 2)) * (TILE / 2), -WORLD.h / 2 + halfH, WORLD.h / 2 - halfH),
