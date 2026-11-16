@@ -10,9 +10,6 @@ his castle is in ruins.
 
 ## Play
 
-* **Online:** https://itskidd03-byte.github.io/kingdom-assault/
-* **Android app:** [download the APK](https://github.com/itskidd03-byte/kingdom-assault/releases/latest/download/kingdom-assault.apk)
-
 ```bash
 npm install
 npm run dev      # http://localhost:3000
@@ -20,48 +17,6 @@ npm run dev      # http://localhost:3000
 
 Production build: `npm run build` → static files in `dist/` (works from any
 static host, including GitHub Pages, because `base` is relative).
-
-## Commander accounts and autosave
-
-Open the menu and create an account (name + password). Passwords are salted and
-stretched with PBKDF2-SHA256 (120k iterations) via WebCrypto before anything is
-stored; a weak fallback exists only for `file://` contexts without WebCrypto.
-
-While you are signed in, every solo campaign is saved automatically:
-
-* every 12 seconds of play,
-* when the page is hidden or closed (tab switch, app backgrounded, phone locked),
-* and the chip in the top bar shows `SAVED hh:mm` when it happens.
-
-`CONTINUE — <when>` on the menu resumes the saved battle exactly: same seed,
-map, buildings (including half-built structures, upgrade timers and recruitment
-queues), every unit's health, order and formation, both economies, research,
-stats and the chronicle. The save is cleared when the war ends.
-
-**Where saves live:** on the device, in `localStorage` (`ka-accounts-v1`,
-`ka-save-v1:<name>`). The game is a static site with no server, so accounts are
-per device/browser rather than cloud accounts — the same account on your phone
-and your laptop are two separate saves. Head-to-head play is unaffected: it is
-peer to peer and never touches the save.
-
-## Install it as an app
-
-**Android APK** — `kingdom-assault.apk` on the
-[releases page](https://github.com/itskidd03-byte/kingdom-assault/releases) is
-built by `.github/workflows/android.yml`. The whole game (engine, art, audio)
-is bundled inside it, so it runs with no connection. Download it, allow installs
-from that source when Android asks, then open Kingdom Assault.
-
-**Any device (PWA)** — open the site in Chrome/Edge/Safari and use
-*Install app* / *Add to Home Screen*. The generated service worker
-(`dist/sw.js`, built by the Vite config) caches the complete build, including all
-3D models, so the installed app starts offline. Page loads are fetched from the
-network first, so a new deployment reaches installed apps immediately while the
-cached shell still covers offline starts.
-
-**Multiplayer works in both** — the app is the same build, and head-to-head is
-peer to peer: host or join, swap the two codes, play. Nothing is hosted on a
-match server, and the app needs no backend when installed.
 
 ## Modes
 
@@ -122,7 +77,7 @@ right-clicking with a building selected sets its rally point.
 ```
 src/core/    config (all rules/data), world + terrain, pathfinding (A*),
              kingdom economy, buildings, units + orders, combat, fog, AI,
-             save snapshots, game orchestration and victory
+             game orchestration and victory
 src/render/  asset loading, three.js scene, terrain/water/bridge, instanced
              nature, building and troop rendering, fog shader, effects
 src/ui/      HUD, command panels, inspector, minimap, input, audio

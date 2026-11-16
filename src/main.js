@@ -37,7 +37,9 @@ function bindMenu() {
   $('#btn-host').addEventListener('click', hostMatch);
   $('#btn-join').addEventListener('click', joinMatch);
   $('#btn-pause').addEventListener('click', togglePause);
-  $('#btn-menu').addEventListener('click', () => location.reload());
+  $('#btn-menu').addEventListener('click', () => openGameMenu());
+  const exitButton = $('#btn-exit');
+  if (exitButton) exitButton.addEventListener('click', () => exitGame());
   $('#btn-sound').addEventListener('click', () => {
     sound.init(); sound.resume(); sound.ambient();
     const on = sound.toggle();
@@ -218,7 +220,7 @@ async function startMatchInner({ mode, difficulty, owner, seed, link, restore })
     owner, mode,
     dispatch: (cmd) => dispatch(cmd),
     onPause: togglePause,
-    onQuit: () => location.reload(),
+    onQuit: () => openGameMenu(),
   });
   state.hud = hud;
   hud.show();
@@ -302,6 +304,54 @@ function togglePause() {
     state.last = performance.now();
   }
   $('#btn-pause').textContent = state.paused ? '▶' : '❚❚';
+}
+
+function clockText(t) {
+  const m = String(Math.floor(t / 60)).padStart(2, '0');
+  const s = String(Math.floor(t % 60)).padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+function openGameMenu() {
+  if (!state.game) { location.reload(); return; }
+  state.paused = true;
+  autosave(true);
+  const overlay = $('#overlay');
+  $('#overlay-title').textContent = 'COMMAND MENU';
+  $('#overlay-text').innerHTML = `Battle at ${clockText(state.game.time)} · ${state.user ? `signed in as <b>${state.user}</b>` : 'not signed in — progress only saves with an account'}`;
+  $('#overlay-actions').innerHTML = `
+    <button id="m-resume" class="primary">RESUME</button>
+    <button id="m-save">SAVE NOW</button>
+    <button id="m-menu">MAIN MENU</button>
+    <button id="m-exit">EXIT GAME</button>`;
+  overlay.classList.remove('hidden');
+  $('#m-resume').onclick = () => {
+    overlay.classList.add('hidden');
+    state.paused = false;
+    state.last = performance.now();
+    $('#btn-pause').textContent = '❚❚';
+  };
+  $('#m-save').onclick = () => {
+    const ok = autosave(true);
+    $('#m-save').textContent = ok ? 'SAVED' : 'SIGN IN TO SAVE';
+  };
+  $('#m-menu').onclick = () => { autosave(true); location.reload(); };
+  $('#m-exit').onclick = () => exitGame();
+  $('#btn-pause').textContent = '▶';
+}
+
+function exitGame() {
+  autosave(true);
+  state.paused = true;
+  const overlay = $('#overlay');
+  $('#overlay-title').textContent = 'THE REALM SLEEPS';
+  $('#overlay-text').innerHTML = state.user
+    ? 'Your campaign is saved. You can close this window now.'
+    : 'You can close this window now.';
+  $('#overlay-actions').innerHTML = '<button id="x-back" class="primary">BACK TO MENU</button>';
+  overlay.classList.remove('hidden');
+  $('#x-back').onclick = () => location.reload();
+  try { window.close(); } catch (err) { /* browsers may refuse; the overlay explains */ }
 }
 
 function showEnd(e) {

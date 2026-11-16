@@ -30,6 +30,8 @@ export class HUD {
     this.tab = 'build';
     this.placement = null;
     this.drag = null;
+    this.touches = new Map();
+    this.pinch = null;
     this.lastClick = { t: 0, id: null };
     this.groups = new Map();
     this.uiTimer = 0;
@@ -60,9 +62,11 @@ export class HUD {
     this._onKeyDown = (e) => this.onKeyDown(e);
     this._onKeyUp = (e) => this.onKeyUp(e);
 
-    canvas.addEventListener('mousedown', this._onDown);
-    window.addEventListener('mousemove', this._onMove);
-    window.addEventListener('mouseup', this._onUp);
+    canvas.addEventListener('pointerdown', this._onDown);
+    canvas.addEventListener('pointermove', this._onMove);
+    canvas.addEventListener('pointerup', this._onUp);
+    canvas.addEventListener('pointercancel', this._onUp);
+    canvas.addEventListener('lostpointercapture', this._onUp);
     canvas.addEventListener('contextmenu', this._onCtx);
     canvas.addEventListener('wheel', this._onWheel, { passive: false });
     window.addEventListener('keydown', this._onKeyDown);
@@ -90,7 +94,7 @@ export class HUD {
     if (e.code === 'Space') { e.preventDefault(); this.onPause(); return; }
     if (e.key === 'Tab') { e.preventDefault(); return; }
     if (k === 'b') { this.tab = 'build'; this.renderTabs(); this.renderCommandBar(true); }
-    if (k === 'r' && this.placement) { this.placement.rot = (this.placement.rot + 1) % 2; }
+    if (k === 'r') this.rotatePlacement();
     if (k === 'a' && !this.placement) this.issueStance('assault');
     if (k === 's' && !this.placement) this.issueStance('stop');
     if (k === 'h' && !this.placement) this.issueStance('hold');
@@ -126,6 +130,8 @@ export class HUD {
   /* ------------------------------------------------------------- pointer */
 
   onPointerDown(e) {
+    if (e.pointerType === 'touch') { this.onTouchStart(e); return; }
+    try { this.view.canvas.setPointerCapture?.(e.pointerId); } catch (err) { /* pointer already released */ }
     if (e.button === 1) {
       this.drag = { mode: 'pan', x: e.clientX, y: e.clientY };
       e.preventDefault();
@@ -144,18 +150,11 @@ export class HUD {
   }
 
   onPointerMove(e) {
+    if (e.pointerType === 'touch') { this.onTouchMove(e); return; }
     const rect = this.view.canvas.getBoundingClientRect();
     this.view.pointer.x = e.clientX;
     this.view.pointer.y = e.clientY;
-    if (this.placement) {
-      const p = this.view.screenToGround(e.clientX, e.clientY);
-      this.placement.point = p;
-      const snapped = this.snap(p.x, p.z, this.placement.type, this.placement.rot);
-      const check = this.game.world.canPlace(this.owner, this.placement.type, snapped.x, snapped.z, this.placement.rot);
-      this.view.setGhost(this.placement.type, snapped.x, snapped.z, this.placement.rot, check.ok);
-      this.placement.valid = check.ok;
-      this.placement.snapped = snapped;
-    }
+    if (this.placement) this.updateGhostAt(e.clientX, e.clientY);
     if (this.drag && this.drag.mode === 'pan') {
       const dx = e.clientX - this.drag.x, dy = e.clientY - this.drag.y;
       const scale = this.view.dist * 0.0018;
@@ -173,6 +172,7 @@ export class HUD {
   }
 
   onPointerUp(e) {
+    if (e.pointerType === 'touch') { this.onTouchEnd(e); return; }
     if (!this.drag) return;
     if (this.drag.mode === 'select') {
       $('#selection-box').classList.add('hidden');
@@ -186,6 +186,88 @@ export class HUD {
       }
     }
     this.drag = null;
+  }
+
+  /* ---------------------------------------------------------------- touch */
+
+  onTouchStart(e) {
+    try { this.view.canvas.setPointerCapture?.(e.pointerId); } catch (err) { /* pointer already released */ }
+    this.touches.set(e.pointerId, {
+      x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY,
+      t: performance.now(), moved: false,
+    });
+    if (this.touches.size === 2) {
+      const [a, b] = [...this.touches.values()];
+      this.pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 };
+      this.drag = null;
+      $('#selection-box').classList.add('hidden');
+    }
+  }
+
+  onTouchMove(e) {
+    const t = this.touches.get(e.pointerId);
+    if (!t) return;
+    e.preventDefault();
+    const dx = e.clientX - t.x, dy = e.clientY - t.y;
+    t.x = e.clientX; t.y = e.clientY;
+    if (Math.hypot(e.clientX - t.x0, e.clientY - t.y0) > 9) t.moved = true;
+
+    // two fingers: pinch to zoom, drag the midpoint to pan
+    if (this.touches.size >= 2 && this.pinch) {
+      const [a, b] = [...this.touches.values()];
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+      this.view.zoom((this.pinch.dist - dist) * 0.006);
+      const scale = this.view.dist * 0.0018;
+      this.view.pan(-(cx - this.pinch.cx) * scale, -(cy - this.pinch.cy) * scale);
+      this.pinch = { dist, cx, cy };
+      return;
+    }
+
+    // one finger: drag the camera, or slide the building ghost around
+    if (t.moved) {
+      const scale = this.view.dist * 0.0018;
+      this.view.pan(-dx * scale, -dy * scale);
+      if (this.placement) this.updateGhostAt(e.clientX, e.clientY);
+    }
+  }
+
+  onTouchEnd(e) {
+    const t = this.touches.get(e.pointerId);
+    this.touches.delete(e.pointerId);
+    if (this.touches.size < 2) this.pinch = null;
+    if (!t) return;
+    if (!t.moved && performance.now() - t.t < 700) this.handleTap(t.x0, t.y0);
+  }
+
+  /** One tap does what left+right click do on desktop. */
+  handleTap(cx, cy) {
+    if (this.placement) {
+      this.updateGhostAt(cx, cy);
+      this.placeBuilding();
+      return;
+    }
+    const ent = this.view.pick(cx, cy);
+    const troops = this.selectedEntities().filter((x) => x.cls && !x.isKing);
+
+    if (ent && ent.owner === this.owner) { this.clickSelect(cx, cy, false); return; }
+    if (troops.length) { this.advanceTo(cx, cy, ent); return; }
+    if (ent) { this.clickSelect(cx, cy, false); return; }
+    this.clearSelection();
+  }
+
+  advanceTo(cx, cy, ent) {
+    const ground = this.view.screenToGround(cx, cy);
+    const ids = this.selectedEntities().filter((u) => u.cls && !u.isKing);
+    if (!ids.length) return;
+    const target = ent && ent.owner !== this.owner ? ent : null;
+    const x = target ? target.x : ground.x;
+    const z = target ? target.z : ground.z;
+    const res = this.dispatch({
+      type: 'order', owner: this.owner, order: 'assault',
+      ids: ids.map((u) => u.id), x, z, formation: ids[0].formation || 'line',
+    });
+    if (res?.ok) this.view.addOrderMarker(x, z, target ? 0xc9564a : 0xd9b25b);
   }
 
   clickSelect(cx, cy, additive) {
@@ -266,9 +348,41 @@ export class HUD {
 
   enterPlacement(type) {
     this.placement = { type, rot: 0, point: { x: 0, z: 0 } };
-    $('#placement-hint').classList.remove('hidden');
-    $('#placement-hint').textContent = `${BUILDINGS[type].name.toUpperCase()} — left click to build · R rotate · ESC cancel`;
+    const hint = $('#placement-hint');
+    hint.classList.remove('hidden');
+    hint.innerHTML = `<span class="ph-name">${BUILDINGS[type].name.toUpperCase()}</span>
+      <button id="place-rotate" type="button">⟳ ROTATE</button>
+      <button id="place-cancel" type="button">✕ CANCEL</button>`;
+    hint.querySelector('#place-rotate').onclick = () => this.rotatePlacement();
+    hint.querySelector('#place-cancel').onclick = () => this.cancelPlacement();
     this.renderCommandBar(true);
+  }
+
+  /** Re-snap the ghost at a screen position (used by mouse move and taps). */
+  updateGhostAt(cx, cy) {
+    if (!this.placement) return null;
+    const p = this.view.screenToGround(cx, cy);
+    this.placement.point = p;
+    const snapped = this.snap(p.x, p.z, this.placement.type, this.placement.rot);
+    const check = this.game.world.canPlace(this.owner, this.placement.type, snapped.x, snapped.z, this.placement.rot);
+    this.view.setGhost(this.placement.type, snapped.x, snapped.z, this.placement.rot, check.ok);
+    this.placement.valid = check.ok;
+    this.placement.snapped = snapped;
+    return snapped;
+  }
+
+  rotatePlacement() {
+    if (!this.placement) return;
+    this.placement.rot = (this.placement.rot + 1) % 2;
+    const p = this.placement.point;
+    if (p) {
+      const snapped = this.snap(p.x, p.z, this.placement.type, this.placement.rot);
+      const check = this.game.world.canPlace(this.owner, this.placement.type, snapped.x, snapped.z, this.placement.rot);
+      this.view.setGhost(this.placement.type, snapped.x, snapped.z, this.placement.rot, check.ok);
+      this.placement.valid = check.ok;
+      this.placement.snapped = snapped;
+    }
+    this.toast(`${BUILDINGS[this.placement.type].name} rotated`);
   }
 
   cancelPlacement() {
@@ -338,8 +452,19 @@ export class HUD {
         if (locked || !afford) card.classList.add('locked');
         if (this.placement?.type === type) card.classList.add('active');
         const unlockNote = type === 'elitehall' && !k.hasBuilding('blacksmith') ? 'needs smithy' : '';
+        const gain = [
+          def.gold ? `+${fmt(def.gold)}g/s` : '',
+          def.food ? `+${fmt(def.food)}f/s` : '',
+          def.mats ? `+${fmt(def.mats)}m/s` : '',
+          def.pop ? `+${def.pop} pop` : '',
+          def.attack ? `${def.attack.dmg} dmg · ${def.attack.range}m` : '',
+          def.healAura ? `heals ${def.healAura}/s` : '',
+          def.unlocks?.length ? `trains ${def.unlocks.map((c) => TROOPS[c].short.toLowerCase()).join(', ')}` : '',
+        ].filter(Boolean).join(' · ');
         card.innerHTML = `<div class="ct">${def.short}</div>
-          <div class="cc">${costHtml(def.cost) || (def.unique ? 'existing' : '')}${unlockNote ? `<i style="color:#c98b5a">${unlockNote}</i>` : ''}</div>`;
+          <div class="cc">${costHtml(def.cost) || (def.unique ? 'existing' : '')}${unlockNote ? `<i style="color:#c98b5a">${unlockNote}</i>` : ''}</div>
+          ${gain ? `<div class="ce">${gain}</div>` : ''}
+          <div class="cd">${def.desc || ''}</div>`;
         card.title = `${def.name} — ${def.desc}\n${def.hp} HP${def.attack ? ` · ${def.attack.dmg} dmg / ${def.attack.range}m` : ''}${def.vision ? ` · ${def.vision}m vision` : ''}`;
         card.onclick = () => {
           if (locked) { this.toast('Already built', 'bad'); return; }
@@ -360,7 +485,9 @@ export class HUD {
         if (locked || !k.canAfford(t.cost)) card.classList.add('locked');
         const queued = k.buildings.reduce((s, b) => s + b.queue.filter((q) => q.cls === cls).length, 0);
         card.innerHTML = `<span class="key">${t.key}</span><div class="ct">${t.short}${queued ? ` ×${queued}` : ''}</div>
-          <div class="cc">${costHtml(t.cost)} <i class="p">${t.pop} pop</i></div>`;
+          <div class="cc">${costHtml(t.cost)} <i class="p">${t.pop} pop</i></div>
+          <div class="ce">${t.time}s · ${Math.round(t.hp)} HP · ${Math.round(t.atk)} ATK · ${t.range > 3 ? `${t.range}m` : 'melee'}</div>
+          <div class="cd">${t.desc || ''}</div>`;
         card.title = `${t.name} — ${t.desc}\n${Math.round(t.hp)} HP · ${Math.round(t.atk)} atk · ${Math.round(t.def)} def · ${t.range > 3 ? t.range + 'm range' : 'melee'}${t.heal ? ` · heals ${t.heal}/s` : ''}\nUpkeep ${t.upkeep.gold.toFixed(2)}g ${t.upkeep.food.toFixed(2)}f / s`;
         card.onclick = () => {
           if (locked) { this.toast(`Requires ${BUILDINGS[t.from].name}`, 'bad'); return; }

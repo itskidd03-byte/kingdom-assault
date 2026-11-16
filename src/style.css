@@ -304,3 +304,50 @@ button.big:hover { background: linear-gradient(180deg, #e8c46a, #bf9648); }
   align-self: center;
   white-space: nowrap;
 }
+
+/* ---------- touch, placement controls, mobile ---------- */
+#scene { touch-action: none; }
+#placement-hint { display: flex; align-items: center; gap: 8px; }
+#placement-hint.hidden { display: none; }
+#placement-hint button {
+  font-family: var(--font); font-size: 9.5px; letter-spacing: 1px; cursor: pointer;
+  background: linear-gradient(180deg, #2a211a, #1a1410); color: var(--text);
+  border: 1px solid var(--edge); padding: 5px 9px;
+}
+#placement-hint button:hover, #placement-hint button:active { border-color: var(--gold); color: var(--gold); }
+.card { width: 138px; }
+.card .ce { font-size: 8.5px; line-height: 1.3; color: #b08d55; margin-top: 3px; }
+.card .cd { font-size: 8.5px; line-height: 1.35; color: #8d7f68; margin-top: 3px; }
+.corner-btn {
+  position: absolute; top: 14px; right: 16px; z-index: 2;
+  font-family: var(--font); font-size: 10px; letter-spacing: 2px; cursor: pointer;
+  color: var(--gold-dim); background: rgba(20, 14, 10, 0.75);
+  border: 1px solid rgba(109, 82, 48, 0.5); padding: 8px 12px;
+}
+.corner-btn:hover { color: var(--gold); border-color: var(--gold); }
+#btn-menu.icon { font-size: 15px; line-height: 1; padding: 5px 9px; }
+
+@media (max-width: 900px) {
+  #topbar { height: 44px; gap: 8px; padding: 0 8px; overflow-x: auto; }
+  #topbar .clock { display: none; }
+  #topbar .crest { font-size: 10px; letter-spacing: 1px; }
+  .res { font-size: 10px; }
+  #commandbar { width: calc(100vw - 12px); bottom: 6px; }
+  #cmd-content { max-height: 32vh; overflow-y: auto; }
+  #cmd-tabs .tab { font-size: 9px; letter-spacing: 1px; padding: 9px 2px; }
+  .card { width: 112px; }
+  #sidebar { display: none; }
+  #inspector { width: 172px; top: 48px; font-size: 10px; }
+  #minimap-wrap { transform: scale(0.62); transform-origin: bottom right; bottom: 0; right: 0; }
+  #placement-hint { bottom: 40vh; font-size: 9px; padding: 4px 8px; }
+  .menu-inner { width: 94vw; padding: 16px 0 28px; }
+  #menu { align-items: flex-start; overflow-y: auto; }
+  .corner-btn { top: 10px; right: 10px; font-size: 9px; padding: 7px 10px; }
+}
+
+@media (pointer: coarse) {
+  .card { min-height: 60px; }
+  #cmd-tabs .tab { padding: 11px 4px; }
+  .top-actions .ghost { padding: 8px 10px; }
+  #minimap { touch-action: none; }
+}
