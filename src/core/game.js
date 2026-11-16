@@ -19,8 +19,9 @@ export class Game {
     this.mode = opts.mode || 'solo';
     this.difficultyKey = opts.difficulty || 'normal';
     this.difficulty = DIFFICULTY[this.difficultyKey];
-    this.rng = new RNG(opts.seed || 20261116);
-    this.world = new World(opts.seed || 20261116);
+    this.seed = opts.seed || 20261116;
+    this.rng = new RNG(this.seed);
+    this.world = new World(this.seed);
     this.buildings = [];
     this.units = [];
     this.projectiles = [];
@@ -676,6 +677,110 @@ export class Game {
         return;
       }
     }
+  }
+
+  /* -------------------------------------------------------------- save/load */
+
+  /** Everything needed to resume this exact battle later. */
+  serialize() {
+    return {
+      v: 1,
+      seed: this.seed,
+      mode: this.mode,
+      difficulty: this.difficultyKey,
+      time: this.time,
+      over: this.over,
+      winner: this.winner,
+      kingdoms: this.kingdoms.map((k) => ({
+        resources: { ...k.resources },
+        upgrades: { ...k.upgrades },
+        research: k.research ? { ...k.research } : null,
+        defeated: k.defeated,
+        stats: { ...k.stats },
+      })),
+      buildings: this.buildings.filter((b) => !b.dead).map((b) => ({
+        owner: b.owner, type: b.type, x: b.x, z: b.z, rot: b.rot, level: b.level,
+        hp: Math.round(b.hp), completed: b.completed, progress: b.progress,
+        queue: b.queue.map((q) => ({ cls: q.cls, remaining: q.remaining, total: q.total })),
+        upgrading: b.upgrading ? { ...b.upgrading } : null,
+        rally: b.rally ? { ...b.rally } : null,
+      })),
+      units: this.units.filter((u) => !u.dead).map((u) => ({
+        owner: u.owner, cls: u.cls, x: u.x, z: u.z, hp: Math.round(u.hp),
+        isKing: u.isKing, hidden: u.hidden, formation: u.formation,
+        order: { type: u.order.type, x: u.order.x, z: u.order.z },
+      })),
+      logs: this.logs.map((list) => list.slice(-30)),
+    };
+  }
+
+  /** Rebuild a battle from a snapshot produced by serialize(). */
+  static fromSave(data) {
+    const game = new Game({ mode: 'solo', difficulty: data.difficulty, seed: data.seed });
+
+    // clear the freshly generated skirmish so the save replaces it wholesale
+    makeWay:
+    for (const b of game.buildings) game.world.applyBuildingNav(b, false);
+    game.buildings.length = 0;
+    game.units.length = 0;
+    game.projectiles.length = 0;
+    game.effects.length = 0;
+    game.world.initNav();
+    game.world.buildOccupancy.clear();
+
+    for (const s of data.buildings || []) {
+      if (!BUILDINGS[s.type]) continue;
+      const b = new Building(game, s.owner, s.type, s.x, s.z, s.rot || 0, {
+        completed: !!s.completed, level: s.level || 1,
+      });
+      b.maxHp = Math.round(b.def.hp * BUILDING_UPGRADE.hpMult(b.level));
+      b.hp = clamp(s.hp ?? b.maxHp, 1, b.maxHp);
+      b.progress = s.completed ? 1 : clamp(s.progress ?? 0, 0, 1);
+      b.queue = (s.queue || []).map((q) => ({ cls: q.cls, remaining: q.remaining, total: q.total }));
+      b.upgrading = s.upgrading ? { ...s.upgrading } : null;
+      b.rally = s.rally ? { ...s.rally } : null;
+      game.buildings.push(b);
+    }
+
+    for (const s of data.units || []) {
+      if (!TROOPS[s.cls]) continue;
+      const u = new Unit(game, s.owner, s.cls, s.x, s.z, { isKing: !!s.isKing, hidden: !!s.hidden });
+      u.hp = clamp(s.hp ?? u.maxHp, 1, u.maxHp);
+      if (u.isKing) {
+        u.maxHp = KING_HP; u.hp = clamp(s.hp ?? KING_HP, 1, KING_HP);
+        u.atk = 34; u.def = 24; u.radius = 0.7;
+        u.moveTo = () => {};
+      }
+      if (s.order) u.setOrder(s.order.type || 'hold', s.order.x ?? s.x, s.order.z ?? s.z);
+      if (s.formation) u.formation = s.formation;
+      game.units.push(u);
+    }
+
+    for (const owner of [0, 1]) {
+      const k = game.kingdoms[owner];
+      const saved = data.kingdoms?.[owner];
+      if (saved) {
+        k.resources = { ...k.resources, ...saved.resources };
+        k.upgrades = { ...k.upgrades, ...saved.upgrades };
+        k.research = saved.research ? { ...saved.research } : null;
+        k.defeated = !!saved.defeated;
+        k.stats = { ...k.stats, ...saved.stats };
+      }
+      k.castle = game.buildings.find((b) => b.owner === owner && b.type === 'castle' && !b.dead) || null;
+      k.king = game.units.find((u) => u.owner === owner && u.isKing && !u.dead) || null;
+    }
+
+    game.time = data.time || 0;
+    game.logs = Array.isArray(data.logs) && data.logs.length === 2 ? data.logs : [[], []];
+    game.over = false;
+    game.ai = null;
+    game.ai = new AIController(game, game.kingdoms[1], game.difficulty);
+    game.world.attachBuildings(game.buildings);
+    game.kingdoms.forEach((k) => k.recalc());
+    game.refreshFog(0);
+    game.refreshFog(1);
+    game.linkEntities();
+    return game;
   }
 
   snapshotEconomy(owner) {

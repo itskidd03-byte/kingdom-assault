@@ -273,3 +273,34 @@ button.big:hover { background: linear-gradient(180deg, #e8c46a, #bf9648); }
 }
 .menu-inner a.app-link:hover { background: rgba(217, 178, 91, 0.16); border-color: var(--gold); }
 #btn-install.hidden { display: none; }
+
+/* ---------- account / autosave ---------- */
+.acc-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.acc-row input {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid rgba(109, 82, 48, 0.6);
+  border-radius: 3px;
+  background: rgba(18, 12, 8, 0.85);
+  color: var(--parchment, #e8dcc2);
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 1px;
+  outline: none;
+}
+.acc-row input:focus { border-color: var(--gold); }
+.acc-row input::placeholder { color: #6d604f; letter-spacing: 2px; text-transform: uppercase; font-size: 10px; }
+.acc-who { margin: 0 0 10px; font-size: 11px; letter-spacing: 1.5px; color: #9b8b71; }
+.acc-who b { color: var(--gold); letter-spacing: 2px; }
+#acc-msg[data-kind="bad"] { color: #c9584a; }
+#acc-msg[data-kind="good"] { color: #86a464; }
+#account-signed-in.hidden, #account-signed-out.hidden, #btn-continue.hidden { display: none; }
+.save-state {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: #6d604f;
+  padding: 0 8px;
+  align-self: center;
+  white-space: nowrap;
+}

@@ -32,6 +32,7 @@
         <div class="res" id="res-army" title="Army size / upkeep"><span class="ico army">♟</span><b>0</b></div>
         <div class="clock"><span id="clock">00:00</span><em id="ai-label">ENEMY: NORMAL</em></div>
         <div class="top-actions">
+          <span id="save-state" class="save-state">NOT SIGNED IN</span>
           <button id="btn-sound" class="ghost" title="Toggle sound">♪</button>
           <button id="btn-pause" class="ghost" title="Pause (P)">❚❚</button>
           <button id="btn-menu" class="ghost" title="Menu">MENU</button>
@@ -77,6 +78,30 @@
         <div class="menu-inner">
           <h1>KINGDOM<span>ASSAULT</span></h1>
           <p class="tagline">Two kingdoms. One bridge. Only one king survives.</p>
+
+          <div class="menu-block" id="account-block">
+            <h2>YOUR COMMANDER</h2>
+            <div id="account-signed-out">
+              <div class="acc-row">
+                <input id="acc-name" placeholder="name" autocomplete="username" maxlength="18" spellcheck="false" />
+                <input id="acc-pass" type="password" placeholder="password" autocomplete="current-password" maxlength="40" />
+              </div>
+              <div class="mp-row">
+                <button id="btn-login">LOG IN</button>
+                <button id="btn-register">CREATE ACCOUNT</button>
+              </div>
+              <p class="hint" id="acc-msg">Accounts and saves live on this device — no server, works offline and in the app.</p>
+            </div>
+            <div id="account-signed-in" class="hidden">
+              <p class="acc-who">Commanding as <b id="acc-current"></b></p>
+              <div class="mp-row">
+                <button id="btn-continue" class="primary hidden">CONTINUE</button>
+                <button id="btn-logout">LOG OUT</button>
+                <button id="btn-forget">DELETE SAVE</button>
+              </div>
+              <p class="hint" id="acc-save-info"></p>
+            </div>
+          </div>
 
           <div class="menu-block">
             <h2>SOLO — WAR AGAINST THE AI</h2>

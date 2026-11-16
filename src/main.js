@@ -5,6 +5,7 @@ import { View } from './render/view.js';
 import { HUD } from './ui/hud.js';
 import { Sound } from './ui/audio.js';
 import { PeerLink, Lockstep } from './net/mp.js';
+import { Accounts, Saves } from './core/save.js';
 
 const $ = (s) => document.querySelector(s);
 const assets = new Assets();
@@ -14,6 +15,7 @@ const state = {
   game: null, view: null, hud: null, mode: 'solo', owner: 0,
   paused: false, over: false, lockstep: null, link: null,
   tickAcc: 0, last: 0, running: false, difficulty: 'normal', seed: 0,
+  user: null,
 };
 
 /* ------------------------------------------------------------------ menu */
@@ -184,7 +186,7 @@ async function startMatch(opts) {
   }
 }
 
-async function startMatchInner({ mode, difficulty, owner, seed, link }) {
+async function startMatchInner({ mode, difficulty, owner, seed, link, restore }) {
   state.mode = mode; state.owner = owner; state.seed = seed; state.link = link || null;
   state.over = false; state.paused = false; state.tickAcc = 0;
   $('#menu').classList.add('hidden');
@@ -196,7 +198,7 @@ async function startMatchInner({ mode, difficulty, owner, seed, link }) {
   });
   $('#loading').classList.add('hidden');
 
-  const game = new Game({ mode, difficulty, seed });
+  const game = restore ? Game.fromSave(restore) : new Game({ mode, difficulty, seed });
   state.game = game;
   const view = new View($('#scene'), game, owner, assets);
   state.view = view;
@@ -312,14 +314,114 @@ function showEnd(e) {
     : `${e.reason}<br>Your king is dead. The kingdom passes to the enemy.`;
   $('#overlay-actions').innerHTML = '<button id="btn-again" class="primary">NEW BATTLE</button><button id="btn-menu2">MAIN MENU</button>';
   overlay.classList.remove('hidden');
+  if (state.mode === 'solo') Saves.clear(state.user);
+  const chip = $('#save-state');
+  if (chip) chip.textContent = 'CAMPAIGN OVER';
   $('#btn-again').onclick = () => location.reload();
   $('#btn-menu2').onclick = () => location.reload();
   if (won) sound.victory(); else sound.defeat();
 }
 
+/* ---------------------------------------------------------------- accounts */
+
+function setAccountMessage(text, kind = '') {
+  const el = $('#acc-msg');
+  if (!el) return;
+  el.dataset.kind = kind;
+  el.textContent = text;
+}
+
+function refreshAccountUI() {
+  const user = state.user = Accounts.current();
+  const signedOut = $('#account-signed-out');
+  const signedIn = $('#account-signed-in');
+  if (!signedOut || !signedIn) return;
+
+  if (user) {
+    signedOut.classList.add('hidden');
+    signedIn.classList.remove('hidden');
+    $('#acc-current').textContent = user;
+    const save = Saves.read(user);
+    const cont = $('#btn-continue');
+    if (save) {
+      cont.classList.remove('hidden');
+      cont.textContent = `CONTINUE — ${Saves.stamp(save)}`;
+      $('#acc-save-info').textContent = `${Saves.describe(save)} · autosaved ${Saves.stamp(save)}`;
+    } else {
+      cont.classList.add('hidden');
+      $('#acc-save-info').textContent = 'No campaign yet — start one and it saves itself.';
+    }
+    $('#save-state').textContent = 'AUTOSAVE ON';
+  } else {
+    signedOut.classList.remove('hidden');
+    signedIn.classList.add('hidden');
+    $('#save-state').textContent = 'NOT SIGNED IN';
+  }
+}
+
+async function submitAccount(create) {
+  const name = $('#acc-name').value;
+  const pass = $('#acc-pass').value;
+  const result = create ? await Accounts.create(name, pass) : await Accounts.login(name, pass);
+  if (!result.ok) { setAccountMessage(result.reason, 'bad'); return; }
+  setAccountMessage(create
+    ? `Welcome, ${result.name}. Every match is saved automatically.`
+    : `Signed in as ${result.name}.`, 'good');
+  $('#acc-pass').value = '';
+  refreshAccountUI();
+}
+
+function autosave(force = false) {
+  if (!state.user) return false;
+  const game = state.game;
+  if (!game || state.over || state.mode !== 'solo') return false;
+  if (!force && game.time < 5) return false;
+  const ok = Saves.write(state.user, game.serialize());
+  const chip = $('#save-state');
+  if (chip && ok) {
+    const now = new Date();
+    chip.textContent = `SAVED ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  }
+  return ok;
+}
+
+function bindAccount() {
+  const login = $('#btn-login');
+  if (!login) return;
+  login.addEventListener('click', () => submitAccount(false));
+  $('#btn-register').addEventListener('click', () => submitAccount(true));
+  $('#acc-pass').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitAccount(Accounts.current() ? true : false); });
+  $('#acc-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#acc-pass').focus(); });
+
+  $('#btn-logout').addEventListener('click', () => {
+    autosave(true);
+    Accounts.logout();
+    setAccountMessage('Signed out. Your save stays on this device.', '');
+    refreshAccountUI();
+  });
+  $('#btn-forget').addEventListener('click', () => {
+    if (!state.user) return;
+    Saves.clear(state.user);
+    setAccountMessage('Campaign save deleted.', '');
+    refreshAccountUI();
+  });
+  $('#btn-continue').addEventListener('click', () => {
+    const save = Saves.read(state.user);
+    if (!save) { refreshAccountUI(); return; }
+    sound.init(); sound.resume(); sound.ambient();
+    startMatch({ mode: 'solo', difficulty: save.difficulty, owner: 0, seed: save.seed, restore: save });
+  });
+
+  setInterval(() => autosave(), 12000);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) autosave(true); });
+  window.addEventListener('pagehide', () => autosave(true));
+  refreshAccountUI();
+}
+
 /* ------------------------------------------------------------------- boot */
 
 bindMenu();
+bindAccount();
 window.addEventListener('pointerdown', () => { sound.init(); sound.resume(); }, { once: true });
 
 // expose for debugging in the console
