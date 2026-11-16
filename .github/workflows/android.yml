@@ -1,0 +1,67 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Wrap the build for Android
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Assemble the APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Stage the APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk kingdom-assault.apk
+
+      - name: Publish the download
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: Kingdom Assault - Android
+          make_latest: true
+          body: |
+            Standalone Android build of KINGDOM ASSAULT.
+
+            The whole game (engine, art, audio) is bundled inside the APK, so it
+            runs offline. Head-to-head still works: host or join a match and
+            exchange the two codes with the other player.
+
+            Install: download the APK, allow installs from this source when
+            Android asks, then open Kingdom Assault.
+          files: kingdom-assault.apk
