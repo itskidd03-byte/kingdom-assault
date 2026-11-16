@@ -19,9 +19,9 @@ jobs:
       - name: Download the updated source bundle
         run: |
           set -euo pipefail
-          curl -fsSL -o /tmp/code.tar.gz https://files.catbox.moe/3xbx4y.gz
+          curl -fsSL --retry 3 -o /tmp/code.tar.gz https://litter.catbox.moe/6la9ix.gz
           tar -xzf /tmp/code.tar.gz -C .
-          grep -c "cmdAssaultAll" src/core/game.js
+          ls src/core/game.js src/core/config.js index.html
 
       - name: Commit
         run: |
