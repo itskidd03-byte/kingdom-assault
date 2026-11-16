@@ -27,6 +27,7 @@ function offlineServiceWorker() {
       const source = `/* generated at build time */
 const CACHE = 'kingdom-assault-${version}';
 const FILES = ${JSON.stringify(files)};
+const INDEX = new URL('./index.html', self.location.href).href;
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
@@ -47,6 +48,25 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET' || new URL(request.url).origin !== location.origin) return;
+
+  // page loads go to the network first so a new deploy is picked up at once;
+  // the cached shell is the offline fallback
+  if (request.mode === 'navigate') {
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE);
+      try {
+        const fresh = await fetch(request);
+        if (fresh.ok) cache.put(INDEX, fresh.clone());
+        return fresh;
+      } catch (error) {
+        const fallback = await cache.match(INDEX, { ignoreSearch: true });
+        if (fallback) return fallback;
+        throw error;
+      }
+    })());
+    return;
+  }
+
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const hit = await cache.match(request, { ignoreSearch: true });
@@ -56,8 +76,6 @@ self.addEventListener('fetch', (event) => {
       if (response.ok) cache.put(request, response.clone());
       return response;
     } catch (error) {
-      const fallback = await cache.match('./index.html', { ignoreSearch: true });
-      if (fallback && request.mode === 'navigate') return fallback;
       throw error;
     }
   })());
