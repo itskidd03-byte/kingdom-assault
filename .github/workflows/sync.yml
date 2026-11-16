@@ -1,0 +1,32 @@
+name: Sync source
+
+on:
+  push:
+    paths: ['.github/workflows/sync.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download the updated source bundle
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/code.tar.gz https://files.catbox.moe/x7sfmf.gz
+          tar -xzf /tmp/code.tar.gz -C .
+          grep -c "isTowerTile" src/core/world.js
+
+      - name: Commit
+        run: |
+          git config user.name "kingdom-assault"
+          git config user.email "itskidd03@gmail.com"
+          git add -A
+          git commit -m "Snake highway to the bridge, preset settlement, road-locked armies and towers that hug the road"
+          git push origin HEAD:main
