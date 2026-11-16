@@ -1,0 +1,13 @@
+{
+  "appId": "com.kingdomassault.game",
+  "appName": "Kingdom Assault",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#110b08",
+    "allowMixedContent": false
+  }
+}

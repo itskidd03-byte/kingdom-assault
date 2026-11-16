@@ -43,6 +43,48 @@ function bindMenu() {
   });
 }
 
+/* ------------------------------------------------------------- app shell */
+
+function initApp() {
+  const install = $('#btn-install');
+  const hint = $('#app-hint');
+  let prompt = null;
+
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    prompt = event;
+    if (install) install.classList.remove('hidden');
+  });
+
+  if (install) {
+    install.addEventListener('click', async () => {
+      if (!prompt) return;
+      prompt.prompt();
+      await prompt.userChoice.catch(() => null);
+      prompt = null;
+      install.classList.add('hidden');
+    });
+  }
+
+  window.addEventListener('appinstalled', () => install && install.classList.add('hidden'));
+
+  const installed = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  if (installed && hint) {
+    hint.textContent = 'Installed — the game is stored on this device. Head-to-head still works from the app.';
+  }
+
+  const apk = $('#btn-apk');
+  if (apk && installed) apk.textContent = 'GET UPDATES';
+
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http') && !window.Capacitor) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    });
+  }
+}
+
+initApp();
+
 function mpPanel(html) {
   const p = $('#mp-panel');
   p.classList.remove('hidden');

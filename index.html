@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <title>KINGDOM ASSAULT — Real-Time Medieval Warfare</title>
     <meta name="description" content="KINGDOM ASSAULT: build a kingdom, raise armies, breach the enemy castle and kill their king." />
+    <meta name="theme-color" content="#110b08" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23110b08'/%3E%3Cpath d='M16 4l10 18H6z' fill='%23d9b25b'/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="./src/style.css" />
   </head>
@@ -91,6 +97,15 @@
               <button id="btn-join">JOIN MATCH</button>
             </div>
             <div id="mp-panel" class="hidden"></div>
+          </div>
+
+          <div class="menu-block">
+            <h2>GET THE APP</h2>
+            <p class="hint" id="app-hint">Install it and the whole game is stored on your device — fullscreen, offline, and head-to-head still works.</p>
+            <div class="mp-row">
+              <a id="btn-apk" class="app-link" href="https://github.com/itskidd03-byte/kingdom-assault/releases/latest/download/kingdom-assault.apk" rel="noopener">ANDROID APK</a>
+              <button id="btn-install" class="hidden">INSTALL APP</button>
+            </div>
           </div>
 
           <div class="menu-foot">

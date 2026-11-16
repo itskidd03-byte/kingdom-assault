@@ -13,8 +13,11 @@
     "three": "^0.169.0"
   },
   "devDependencies": {
-    "vite": "^5.4.10",
+    "@capacitor/android": "^6.2.3",
+    "@capacitor/cli": "^6.2.3",
+    "@capacitor/core": "^6.2.3",
     "@gltf-transform/cli": "^4.5.1",
-    "@gltf-transform/core": "^4.5.1"
+    "@gltf-transform/core": "^4.5.1",
+    "vite": "^5.4.10"
   }
 }
